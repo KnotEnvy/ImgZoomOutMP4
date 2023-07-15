@@ -94,9 +94,9 @@ class ZoomApp:
 
         # Coordinates for the 640x384 region at the bottom center of the larger image
         left = (img2.width) // 2
-        upper = img2.height
-        right = left
-        lower = upper
+        upper = img2.height - 100
+        right = left + 200
+        lower = upper + 100
 
         # Crop the larger image to get the initial frame
         initial_frame = img2.crop((left, upper, right, lower))
