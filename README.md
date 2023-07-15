@@ -42,7 +42,7 @@ To install Image Zoom-Out Video Generator, follow these steps:
 4. Run the application:
 
    ```
-   python zoomui.py
+   python zoom.py
    ```
 
    If you have both Python 2.x and Python 3.x installed, you might need to use `python3` instead of `python`.
