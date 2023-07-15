@@ -17,10 +17,37 @@ This application allows users to create a zoom-out effect on an image and genera
 
 ## Installation
 
-1. Clone this repository
-2. Navigate to the cloned repository
-3. Install the required packages by running `pip install -r requirements.txt`
-4. Run `python zoom.py` to start the application (zoomui.py is for testing)
+### Prerequisites
+
+Before you start, ensure you have met the following requirements:
+
+* You have installed Python 3.9 or later. If you haven't installed Python yet, you can download it from [here](https://www.python.org/downloads/). The Python package includes the Tkinter module by default. If you're using a Python version earlier than 3.9, you might need to install Tkinter separately.
+
+* You have a Windows/Linux/Mac machine that can run Python and Tkinter.
+
+### Installing Image Zoom-Out Video Generator
+
+To install Image Zoom-Out Video Generator, follow these steps:
+
+1. Clone the repository or download the source code.
+2. Navigate to the project directory in your terminal or command prompt.
+3. Install the required Python packages using pip:
+
+   ```
+   pip install -r requirements.txt
+   ```
+
+   If you have both Python 2.x and Python 3.x installed, you might need to use `pip3` instead of `pip`.
+
+4. Run the application:
+
+   ```
+   python zoomui.py
+   ```
+
+   If you have both Python 2.x and Python 3.x installed, you might need to use `python3` instead of `python`.
+
+If you encounter any problems during the installation, feel free to open an issue on this GitHub repository.
 
 ## Usage
 
