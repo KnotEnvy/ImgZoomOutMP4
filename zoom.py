@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
 import cv2
 import numpy as np
 from PIL import Image
@@ -39,14 +39,27 @@ class ZoomApp:
         self.output_dir_var = tk.StringVar()
         tk.Entry(self.frame, textvariable=self.output_dir_var, width=50).grid(row=4, column=1)
         tk.Button(self.frame, text="Browse", command=self.browse_directory).grid(row=4, column=2)
+        
+        # Dropdown menu for start position
+        tk.Label(self.frame, text="Start Position:", font=("Helvetica", 12)).grid(row=5, column=0, sticky="w")
+        self.start_position_var = tk.StringVar()
+        self.start_position_combobox = ttk.Combobox(self.frame, textvariable=self.start_position_var)
+        self.start_position_combobox['values'] = ('Top Left', 'Top Right', 'Bottom Left', 'Bottom Right', 'Center Top', 'Center Bottom', 'Center')
+        self.start_position_combobox.grid(row=5, column=1)
 
         # Button to generate video
         self.button = tk.Button(self.frame, text="Generate Video", command=self.open_image, font=("Helvetica", 12), bg="blue", fg="white")
-        self.button.grid(row=5, column=0, columnspan=3)
+        self.button.grid(row=6, column=0, columnspan=3)
+
+        # Progress bar
+        self.progress_var = tk.DoubleVar()
+        self.progress_bar = ttk.Progressbar(self.frame, length=300, variable=self.progress_var)
+        self.progress_bar.grid(row=8, column=0, columnspan=3)
+        self.progress_bar.grid_remove()  # Hide progress bar initially
 
         # Status label
         self.label = tk.Label(self.frame, text="", font=("Helvetica", 12))
-        self.label.grid(row=6, column=0, columnspan=3)
+        self.label.grid(row=7, column=0, columnspan=3)
 
     def browse_image(self):
         # Open a file dialog and get the path of the selected image
@@ -82,41 +95,77 @@ class ZoomApp:
         self.label.config(text="Processing...")
 
         # Process image in a separate thread to avoid blocking the UI
-        thread = threading.Thread(target=self.process_image, args=(image_path, output_dir, video_duration, fps))
+        self.progress_var.set(0)  # Reset progress bar
+        self.progress_bar.grid()  # Show progress bar
+        thread = threading.Thread(target=self.process_image, args=(image_path, output_dir, video_duration, fps, self.progress_var))
         thread.start()
 
-    def process_image(self, image_path, output_dir, video_duration, fps):
+        # Start a periodic function that updates the progress bar
+        self.update_progress_bar()
+
+    def update_progress_bar(self):
+        # Schedule this function to run again after 100 ms
+        self.root.after(100, self.update_progress_bar)
+        if self.progress_var.get() >= 100:
+            self.progress_bar.grid_remove()
+
+    def process_image(self, image_path, output_dir, video_duration, fps, progress_var):
         # Calculate the number of frames based on the duration
         num_frames_video = int(video_duration * fps)
 
         # Load the image
         img2 = Image.open(image_path)
 
-        # Coordinates for the 640x384 region at the bottom center of the larger image
-        left = (img2.width - 200) // 2
-        upper = img2.height - 100
-        right = left + 200
-        lower = upper + 100
+        # Get start position from dropdown menu
+        start_position = self.start_position_var.get()
 
-        # Crop the larger image to get the initial frame
-        initial_frame = img2.crop((left, upper, right, lower))
+        # Define the size of the initial zoomed-in area as a fraction of the image size
+        fraction = 0.05
+        crop_width = int(img2.width * fraction)
+        crop_height = int(img2.height * fraction)
 
-        # Resize initial frame to be the same size as the larger one
-        initial_frame_resized = initial_frame.resize(img2.size)
-
-        # Define parameters for zoom effect
-        step_sizes_video = np.linspace(0, 1, num_frames_video)
+        # Set coordinates for the starting frame based on the selected start position
+        if start_position == 'Top Left':
+            left_start = 0
+            upper_start = 0
+        elif start_position == 'Top Right':
+            left_start = img2.width - crop_width
+            upper_start = 0
+        elif start_position == 'Bottom Left':
+            left_start = 0
+            upper_start = img2.height - crop_height
+        elif start_position == 'Bottom Right':
+            left_start = img2.width - crop_width
+            upper_start = img2.height - crop_height
+        elif start_position == 'Center Top':
+            left_start = (img2.width - crop_width) // 2
+            upper_start = 0
+        elif start_position == 'Center Bottom':
+            left_start = (img2.width - crop_width) // 2
+            upper_start = img2.height - crop_height
+        elif start_position == 'Center':
+            left_start = (img2.width - crop_width) // 2
+            upper_start = (img2.height - crop_height) // 2
 
         # Generate frames for zoom effect
         frames_video = []
-        for i, step in enumerate(step_sizes_video):
-            # Linear interpolation between initial_frame_resized and img2
-            result = Image.blend(initial_frame_resized, img2, step)
+        for i in range(num_frames_video):
+            # Calculate current crop box
+            left = int(left_start * (1 - i / num_frames_video))
+            upper = int(upper_start * (1 - i / num_frames_video))
+            right = left + int(img2.width * (i / num_frames_video + fraction))
+            lower = upper + int(img2.height * (i / num_frames_video + fraction))
+
+            # Crop and resize image
+            result = img2.crop((left, upper, right, lower)).resize(img2.size)
             frames_video.append(result)
 
             # Save frame as PNG
             frame_path = os.path.join(output_dir, f"frame_{i:04d}.png")
             result.save(frame_path)
+
+            # Update progress var
+            progress_var.set((i + 1) / num_frames_video * 100)
 
         # Create video
         frame_paths = [os.path.join(output_dir, f"frame_{i:04d}.png") for i in range(num_frames_video)]
@@ -137,6 +186,7 @@ class ZoomApp:
 
         # Re-enable button
         self.root.after(0, self.button.config, {'state': 'normal'})
+
 
 root = tk.Tk()
 app = ZoomApp(root)
